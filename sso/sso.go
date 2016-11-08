@@ -9,8 +9,6 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-
-	"github.com/justindh/gocrest/evetime"
 )
 
 const (
@@ -34,24 +32,6 @@ func NewSSO(loginURL, callbackURL, clientID, secretKey, userAgent string, scopes
 	return SSO{LoginURL: loginURL, CallbackURL: callbackURL, ClientID: clientID, SecretKey: secretKey, UserAgent: userAgent, Scopes: scopes}
 }
 
-func (s *SSO) Call(method, path string, args url.Values, output interface{}) error {
-	uri := s.LoginURL + path
-	if args == nil {
-		args = url.Values{}
-	}
-	resp, err := http.NewRequest(method, uri, bytes.NewBufferString(args.Encode()))
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	err = json.NewDecoder(resp.Body).Decode(&output)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 func (s *SSO) CallRequest(request *http.Request, output interface{}) error {
 	client := &http.Client{}
 	resp, err := client.Do(request)
@@ -73,6 +53,7 @@ func (s *SSO) CallRequest(request *http.Request, output interface{}) error {
 	return nil
 }
 
+// GetAuthURI returns the link that we need to follow to ccp. Just a nicety
 func (s *SSO) GetAuthURI(state string) (url.URL, error) {
 	sURL, err := url.Parse(fmt.Sprintf("%s%s", s.LoginURL, PathOAuthAuthorize))
 	if err != nil {
@@ -112,25 +93,4 @@ func (s *SSO) VerifyToken(token string) (OAuthVerifyReponse, error) {
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
 	err = s.CallRequest(req, &oavr)
 	return oavr, err
-}
-
-type OAuthVerify struct {
-	GrantType    string `json:"grant_type"`
-	Code         string `json:"code"`
-	RefreshToken string `json:"refresh_token"`
-}
-type OAuthTokenResponse struct {
-	AccessToken  string `json:"access_token"`
-	TokenType    string `json:"token_type"`
-	RefreshToken string `json:"refresh_token"`
-	ExpiresIn    int    `json:"expires_in"`
-}
-
-type OAuthVerifyReponse struct {
-	CharacterID        int             `json:"CharacterID"`
-	CharacterName      string          `json:"CharacterName"`
-	ExpiresOn          evetime.EveTime `json:"ExpiresOn"`
-	Scopes             string          `json:"Scopes"`
-	TokenType          string          `json:"TokenType"`
-	CharacterOwnerHash string          `json:"CharacterOwnerHash"`
 }
